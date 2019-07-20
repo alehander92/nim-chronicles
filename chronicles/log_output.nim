@@ -81,12 +81,24 @@ when defined(js):
       record: js
 
     JsonString* = distinct string
+
+    KindRecord*[Output; timestamps: static[TimestampsScheme]] = object
+      output*: Output
+      record: string
+      path: string
+
 else:
   type
     JsonRecord*[Output; timestamps: static[TimestampsScheme]] = object
       output*: Output
       outStream: OutputStream
       jsonWriter: JsonWriter
+
+    KindRecord*[Output; timestamps: static[TimestampsScheme]] = object
+      output*: Output
+      outStream: OutputStreamVar
+      record: string
+      path: string
 
 export
   JsonString
@@ -257,6 +269,7 @@ proc selectRecordType(s: var StreamCodeNodes, sink: SinkSpec): NimNode =
                    of json: bnd"JsonRecord"
                    of textLines: bnd"TextLineRecord"
                    of textBlocks: bnd"TextBlockRecord"
+                   of kindFormat: bnd"KindRecord"
 
   result = newTree(nnkBracketExpr, RecordType)
 
@@ -283,7 +296,7 @@ proc selectRecordType(s: var StreamCodeNodes, sink: SinkSpec): NimNode =
   result.add newIdentNode($sink.timestamps)
 
   # Set the color scheme for the record types that require it
-  if sink.format != json:
+  if sink.format != json and sink.format != kindFormat:
     var colorScheme = sink.colorScheme
     when not defined(windows):
       # `NativeColors' means `AnsiColors` on non-Windows platforms:
@@ -667,6 +680,38 @@ proc initLogRecord*(r: var JsonRecord,
 
   if topics.len > 0:
     r["topics"] = topics
+
+proc initLogRecord*(r: var KindRecord,
+                    lvl: LogLevel,
+                    topics: string,
+                    name: string) =
+  when defined(js):
+    r.record = ""
+    r.path = ""
+  else:
+    r.outStream = init OutputStream
+    r.record = ""
+    r.path = ""
+
+  r.record.add shortName(lvl) & " " & topics.align(20, ' ')
+  r.record.add " " & name.align(80, ' ')
+
+proc setProperty*(r: var KindRecord, key: string, val: auto) =
+  if key != "tid" and key != "file":
+    r.record.add " " & key & " " & $val
+  elif key == "file":
+    r.path = ($val).rsplit("/", 1)[1]
+
+template setFirstProperty*(r: var KindRecord, key: string, val: auto) =
+  r.setProperty key, val
+
+proc flushRecord*(r: var KindRecord) =
+  r.record.add " " & r.path.align(20, ' ')
+  when defined(js):
+    r.output.append cstring(r.record & "\n")
+  else:
+    r.output.append r.record & '\n'
+  r.output.flushOutput
 
 proc setProperty*(r: var JsonRecord, key: string, val: auto) =
   r[key] = val
