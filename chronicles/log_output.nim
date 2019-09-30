@@ -700,7 +700,8 @@ proc setProperty*(r: var KindRecord, key: string, val: auto) =
   if key != "tid" and key != "file":
     r.record.add " " & key & " " & $val
   elif key == "file":
-    r.path = ($val).rsplit("/", 1)[1]
+    # echo $val
+    r.path = $val #($val).rsplit("/", 1)[1]
 
 template setFirstProperty*(r: var KindRecord, key: string, val: auto) =
   r.setProperty key, val
