@@ -14,10 +14,10 @@ when defined(js):
 else:
   import
     terminal,
-    faststreams/output_stream, json_serialization/writer
+    faststreams/output_stream, json_serialization/writer, tables
 
   export
-    output_stream, writer
+    output_stream, writer, tables
 
   type OutStr = string
 
@@ -99,6 +99,7 @@ else:
       outStream: OutputStreamVar
       record: string
       path: string
+      color*: ForegroundColor
 
 export
   JsonString
@@ -681,6 +682,16 @@ proc initLogRecord*(r: var JsonRecord,
   if topics.len > 0:
     r["topics"] = topics
 
+
+when not defined(js):
+  var TOPIC_COLORS = {"prestart": fgWhite, "index": fgBlack, "cgdb": fgRed, "debugger": fgGreen, "plugin": fgBlue, "preload": fgMagenta, "move": fgCyan, "python": fgYellow}.toTable()
+
+  template fgColor(record, color, brightness) =
+    append(record.output, ansiForegroundColorCode(color, brightness))
+  
+  template resetColors(record) =
+    append(record.output, ansiResetCode)
+
 proc initLogRecord*(r: var KindRecord,
                     lvl: LogLevel,
                     topics: string,
@@ -692,9 +703,17 @@ proc initLogRecord*(r: var KindRecord,
     r.outStream = init OutputStream
     r.record = ""
     r.path = ""
+    if TOPIC_COLORS.hasKey(topics):
+      r.color = TOPIC_COLORS[topics]
+    else:
+      r.color = fgBlue
+    fgColor(r, r.color, false)
 
   r.record.add shortName(lvl) & " " & topics.align(20, ' ')
   r.record.add " " & name.align(80, ' ')
+
+  when not defined(js):
+    resetColors(r)
 
 proc setProperty*(r: var KindRecord, key: string, val: auto) =
   if key != "tid" and key != "file":
@@ -704,6 +723,8 @@ proc setProperty*(r: var KindRecord, key: string, val: auto) =
     r.path = $val #($val).rsplit("/", 1)[1]
 
 template setFirstProperty*(r: var KindRecord, key: string, val: auto) =
+  when not defined(js):
+    fgColor(r, r.color, false)  
   r.setProperty key, val
 
 proc flushRecord*(r: var KindRecord) =
@@ -712,6 +733,7 @@ proc flushRecord*(r: var KindRecord) =
     r.output.append cstring(r.record & "\n")
   else:
     r.output.append r.record & '\n'
+    resetColors(r)
   r.output.flushOutput
 
 proc setProperty*(r: var JsonRecord, key: string, val: auto) =
