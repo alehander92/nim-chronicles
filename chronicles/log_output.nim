@@ -684,7 +684,7 @@ proc initLogRecord*(r: var JsonRecord,
 
 
 when not defined(js):
-  var TOPIC_COLORS = {"prestart": fgWhite, "index": fgBlack, "cgdb": fgRed, "debugger": fgGreen, "plugin": fgBlue, "preload": fgMagenta, "move": fgCyan, "python": fgYellow}.toTable()
+  var TOPIC_COLORS = {"index": fgBlack, "cgdb": fgRed, "debugger": fgGreen, "plugin": fgBlue, "preload": fgMagenta, "history": fgYellow, "move": fgCyan, "python": fgYellow}.toTable()
 
   template fgColor(record, color, brightness) =
     append(record.output, ansiForegroundColorCode(color, brightness))
