@@ -6,8 +6,8 @@ when defined(js):
   import
     jscore, jsconsole, jsffi
 
-  export
-    convertToConsoleLoggable
+  # export
+  #   convertToConsoleLoggable
 
   type OutStr = cstring
 
@@ -348,10 +348,10 @@ template getOutputStream(o: FileOutput): File =
   o.outFile
 
 when defined(js):
-  template append*(o: var StdOutOutput, s: OutStr) = console.log s
+  template append*(o: var StdOutOutput, s: OutStr) = discard # console.log s
   template flushOutput*(o: var StdOutOutput)       = discard
 
-  template append*(o: var StdErrOutput, s: OutStr) = console.error s
+  template append*(o: var StdErrOutput, s: OutStr) = discard # TODO jsconsole.console.error s
   template flushOutput*(o: var StdErrOutput)       = discard
 
 else:
