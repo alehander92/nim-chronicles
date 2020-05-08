@@ -96,7 +96,7 @@ else:
 
     KindRecord*[Output; timestamps: static[TimestampsScheme]] = object
       output*: Output
-      outStream: OutputStreamVar
+      outStream: OutputStream
       record: string
       path: string
       color*: ForegroundColor
@@ -173,8 +173,9 @@ template ignoreIOErrors(body: untyped) =
 
 proc logLoggingFailure*(msg: cstring, ex: ref Exception) =
   ignoreIOErrors:
-    stderr.writeLine("[Chronicles] Log message not delivered: ", msg)
-    if ex != nil: stderr.writeLine(ex.msg)
+    discard
+    # stderr.writeLine("[Chronicles] Log message not delivered: ", msg)
+    # if ex != nil: stderr.writeLine(ex.msg)
 
 template undeliveredMsg(reason: string, logMsg: OutStr, ex: ref Exception) =
   const error = "[Chronicles] " & reason & ". Log message not delivered: "
@@ -700,7 +701,7 @@ proc initLogRecord*(r: var KindRecord,
     r.record = ""
     r.path = ""
   else:
-    r.outStream = init OutputStream
+    r.outStream = memoryOutput()
     r.record = ""
     r.path = ""
     if TOPIC_COLORS.hasKey(topics):
