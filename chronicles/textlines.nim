@@ -47,7 +47,7 @@ proc appendValueImpl[T](r: var LogRecord, value: T) =
 
   elif value is seq|array:
     appendChar(r, '[')
-    for index, value in collection.pairs:
+    for index, value in value.pairs:
       if index > 0: r.output.append ", "
       appendValueImpl(r, formatItIMPL value)
     appendChar(r, ']')
@@ -66,6 +66,11 @@ proc appendValueImpl[T](r: var LogRecord, value: T) =
     else:
       r.output.append value
 
+  elif value is enum:
+    append(r.output, $value)
+
+  elif value is ref:
+    appendValueImpl(r, value[])
   else:
     const typeName = typetraits.name(T)
     {.fatal: "The textlines format does not support the '" & typeName & "' type".}
