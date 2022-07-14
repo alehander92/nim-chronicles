@@ -14,6 +14,8 @@ else:
 export
   LogLevel
 
+var outPath*: string = ""
+
 type
   FileOutput* = object
     outFile*: File
@@ -669,6 +671,7 @@ func toModuleName(format: LogFormatPlugin): string =
   of "json": "chronicles/json_records"
   of "textlines": "chronicles/textlines"
   of "textblocks": "chronicles/textblocks"
+  of "codetracer_output": "chronicles/codetracer_output"
   else: string format
 
 macro createStreamRecordTypes: untyped =

@@ -1,8 +1,10 @@
 import
   times, strutils, typetraits, terminal,
   serialization/object_serialization, faststreams/[outputs, textio],
-  options, log_output, textformats
+  options, log_output, textformats, os
 
+var outFile: File
+    
 type
   LogRecord*[OutputKind;
              timestamps: static[TimestampScheme],
@@ -109,8 +111,10 @@ const
 proc initLogRecord*(r: var LogRecord,
                     level: LogLevel,
                     topics, msg: string) =
+  if outFile.isNil:
+    outFile = open(getAppFilename().extractFilename & ".log", fmAppend)
   r.level = level
-  r.output = initOutputStream type(r)
+  r.output = fileOutput(outFile)
 
   # Log level comes first - allows for easy regex match with ^
   appendLogLevelMarker(r, level)
@@ -150,5 +154,6 @@ proc flushRecord*(r: var LogRecord) =
     if r.exception != nil:
       appendStackTrace(r)
 
-  flushOutput r.OutputKind, r.output
+  r.output.flush()
+  # flushOutput r.OutputKind, r.output
 

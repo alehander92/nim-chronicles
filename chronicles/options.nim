@@ -221,7 +221,8 @@ proc sinkSpecsFromNode*(streamNode: NimNode): seq[SinkSpec] =
                               defaultTimestamsScheme,
                               logDestinationFromStr(chronicles_default_output_device))
     of nnkBracketExpr:
-      var spec = makeSinkSpec(LogFormatPlugin($(n[0])),
+      var node = if n[0].kind == nnkPar: n[0][0] else: n[0]
+      var spec = makeSinkSpec(LogFormatPlugin(node.repr),
                               defaultColorScheme,
                               defaultTimestamsScheme)
       for i in 1 ..< n.len:
