@@ -20,6 +20,9 @@ type
     when stackTracesEnabled:
       exception*: ref Exception
 
+const
+  minLevel = LogLevel.Debug
+
 # const
 #   # We work-around a Nim bug:
 #   # The compiler claims that the `terminal` module is unused
@@ -156,7 +159,7 @@ proc initLogRecord*(r: var LogRecord,
     #     r.output.append "\""
 
 proc setProperty*(r: var LogRecord, name: string, value: auto) =
-  if r.level < LogLevel.Debug:
+  if r.level < minLevel: # LogLevel.Debug:
     return
 #   r.appendFieldName name
   if name == "file":
@@ -201,7 +204,7 @@ template localLevelToStyle(lvl: LogLevel): untyped =
 
 proc flushRecord*(r: var LogRecord) =
   # <level><thread><file>[<indentation space>]<message>[<args>]
-  if r.level < LogLevel.Debug:
+  if r.level < minLevel: # Debug:
     return
   if not r.isLogGroup:
     let (color, bright) = localLevelToStyle(r.level)
