@@ -4,7 +4,7 @@ import
   chronicles/[options, log_output, textformats]
 
 var outFile: File
-    
+
 type
   LogRecord*[OutputKind;
              timestamps: static[TimestampScheme],
@@ -17,6 +17,7 @@ type
     isLogGroup: bool
     logGroupName: string
     level: LogLevel
+    taskId*: string
     when stackTracesEnabled:
       exception*: ref Exception
 
@@ -132,24 +133,17 @@ proc initLogRecord*(r: var LogRecord,
     r.level = level
 
     r.output = fileOutput(outFile)
-    
-    r.thread = "_".alignLeft(threadColumnWidth)
-    # Log level comes first - allows for easy regex match with ^
-    r.levelText = shortName(level) & " " # appendLogLevelMarker(r, level)
 
-    #   writeSpaceAndTs(r)
+    r.thread = "_".alignLeft(threadColumnWidth)
+    r.levelText = ($level).capitalizeAscii
 
     let msgLen = msg.len
-    #   r.output.append " "
-    #   applyStyle(r, styleBright)
     if msgLen < msgWidth:
         r.content.add(msg)
-        r.content.add(spaces[0 .. msgWidth - msgLen]) # ' '.repeat(msgWidth - msgLen)) # spaces.toOpenArray(1, msgWidth - msgLen))
+        r.content.add(spaces[0 .. msgWidth - msgLen])
     else:
         r.content.add(msg[0 .. msgWidth - 3]) # .toOpenArray(0, msgWidth - 3))
         r.content.add(".. ")
-
-    #   resetColors(r)
 
     #   if topics.len > 0:
     #     r.output.append " topics=\""
@@ -163,14 +157,19 @@ proc setProperty*(r: var LogRecord, name: string, value: auto) =
     return
 #   r.appendFieldName name
   if name == "file":
-    r.location = ($value).alignLeft(locationWidth)
+    r.location = $value
   elif name == "threadName":
-    r.thread = ($value).alignLeft(threadColumnWidth)
+    r.thread = $value
   elif name == "tid":
     discard
   elif name == "logGroup":
     r.isLogGroup = true
     r.logGroupName = $value
+  elif name == "repr" and r.content.strip == "send!":
+    when value is string:
+      r.content = value
+  elif name == "taskId":
+    r.taskId = $value
   else:
     when value is object:
       r.content.add(name & "=" & $value & " ")
@@ -202,18 +201,28 @@ template localLevelToStyle(lvl: LogLevel): untyped =
   of FATAL: (fgRed, false)
   of DEFAULT, NONE: (fgWhite, false)
 
+# time |
 proc flushRecord*(r: var LogRecord) =
-  # <level><thread><file>[<indentation space>]<message>[<args>]
+  # <time:18> | <level:5> | <task-id:17> | <file:line:28> | ([<indentation space>]<message>:50)[<args>()]
+  # for now no <thread>
   if r.level < minLevel: # Debug:
     return
   if not r.isLogGroup:
-    let (color, bright) = localLevelToStyle(r.level)
-    setFgColor(r, color, bright)
-    r.output.append r.levelText
-    r.output.append r.thread
-    r.output.append r.location
-    r.resetColors
+    # let (color, bright) = localLevelToStyle(r.level)
+    # setFgColor(r, color, bright)
+    when r.timestamps == UnixTime:
+      let t = $epochTime()
+    else:
+      let t = "-1.0"
+    r.output.append t.alignLeft(18) &  " | "
+    r.output.append r.levelText.alignLeft(5) & " | "
+    # r.output.append r.thread
+    r.output.append r.taskId.alignLeft(17) & " | "
+    r.output.append r.location.alignLeft(28) & " | "
+    # r.resetColors
     r.output.append r.content
+    # adapted from json_records.nim
+    # echo r.timestamps == UnixTime
     r.output.append "\n"
   else:
     let repeatingCharacter = if r.content.len > 0: r.content[0] else: '='
